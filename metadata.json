@@ -1,0 +1,6 @@
+{
+  "name": "MIDBLEND — Beauty & Skincare Creator Agency",
+  "description": "MIDBLEND connects beauty, skincare and lifestyle brands with creators to build authentic partnerships and impactful campaigns.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
