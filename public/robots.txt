@@ -1,7 +1,5 @@
-# https://www.robotstxt.org/robotstxt.html
 User-agent: *
 Allow: /
-Allow: /apply
 Disallow: /admin
 
 Sitemap: https://midblend.com/sitemap.xml
