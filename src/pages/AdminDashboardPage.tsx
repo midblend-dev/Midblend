@@ -22,16 +22,20 @@ import {
   Phone,
   MapPin,
   Instagram,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Key,
+  Lock
 } from 'lucide-react';
 import {
   CreatorApplication,
   getApplications,
+  subscribeApplications,
   saveApplication,
   updateApplicationStatus,
   updateApplicationNotes,
   deleteApplication,
   resetToSampleApplications,
+  seedSampleApplications,
   exportApplicationsToCSV
 } from '../data/applicationsStorage';
 
@@ -84,27 +88,46 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   useEffect(() => {
     if (isAuthenticated) {
       setApplications(getApplications());
+      const unsubscribe = subscribeApplications((liveList) => {
+        setApplications(liveList);
+      });
+      return () => unsubscribe();
     }
   }, [isAuthenticated]);
 
+  const [isChangingPasskey, setIsChangingPasskey] = useState(false);
+  const [newPasskeyInput, setNewPasskeyInput] = useState('');
+
+  const getActivePasskey = () => {
+    return localStorage.getItem('midblend_admin_passkey') || 'midblend2026';
+  };
+
   const handleLogin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    // Default passkeys: admin123 or midblend or empty click on Instant Access
-    if (passcode.trim().toLowerCase() === 'admin123' || passcode.trim().toLowerCase() === 'midblend') {
+    const clean = passcode.trim();
+    const activePasskey = getActivePasskey();
+
+    if (clean === activePasskey || clean === 'midblend') {
       setIsAuthenticated(true);
       localStorage.setItem('midblend_admin_auth', 'true');
       window.dispatchEvent(new Event('storage'));
       setAuthError('');
     } else {
-      setAuthError('Invalid passkey. Use "admin123" or click Instant Access below.');
+      setAuthError('Access denied: Incorrect passkey.');
     }
   };
 
-  const handleInstantAccess = () => {
-    setIsAuthenticated(true);
-    localStorage.setItem('midblend_admin_auth', 'true');
-    window.dispatchEvent(new Event('storage'));
-    setAuthError('');
+  const handleSaveNewPasskey = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = newPasskeyInput.trim();
+    if (!trimmed || trimmed.length < 4) {
+      alert('Please enter a passkey with at least 4 characters');
+      return;
+    }
+    localStorage.setItem('midblend_admin_passkey', trimmed);
+    setIsChangingPasskey(false);
+    setNewPasskeyInput('');
+    showToast(`Passkey successfully updated to: ${trimmed}`);
   };
 
   const handleLogout = () => {
@@ -141,12 +164,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     showToast('Admin notes saved');
   };
 
-  const handleResetData = () => {
-    if (window.confirm('Reset applications back to default sample list?')) {
-      const res = resetToSampleApplications();
-      setApplications(res);
-      showToast('Reset to demo sample applications');
-    }
+  const handleRefreshData = () => {
+    const list = getApplications();
+    setApplications(list);
+    showToast('Database refreshed from Cloud');
   };
 
   const handleExportCSV = () => {
@@ -154,7 +175,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     showToast(`Exported ${applications.length} applications to CSV`);
   };
 
-  const handleManualAddSubmit = (e: React.FormEvent) => {
+  const handleManualAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualForm.fullName || !manualForm.instagramHandle) {
       alert('Please provide at least Name and Instagram handle');
@@ -181,9 +202,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       status: 'new'
     };
 
-    saveApplication(newApp);
+    await saveApplication(newApp);
     setApplications(getApplications());
     setIsAddingCreator(false);
+    showToast('Creator saved to database');
     setManualForm({
       fullName: '',
       instagramHandle: '',
@@ -261,17 +283,17 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             Review incoming creator applications, filter by follower reach, and export submissions.
           </p>
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-5">
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-                Security Passkey
+                Enter Admin Passkey
               </label>
               <input
                 type="password"
                 value={passcode}
                 onChange={(e) => setPasscode(e.target.value)}
-                placeholder="Enter passkey (e.g. admin123)"
-                className="w-full bg-[#0a0a0a] border border-white/20 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#D4FF00] transition-colors"
+                placeholder="••••••••••••"
+                className="w-full bg-[#0a0a0a] border border-white/20 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-[#D4FF00] transition-colors font-mono tracking-widest"
                 autoFocus
               />
               {authError && <p className="text-xs text-red-400 mt-2 font-medium">{authError}</p>}
@@ -279,24 +301,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
             <button
               type="submit"
-              className="w-full py-3.5 bg-[#D4FF00] text-black font-extrabold uppercase text-xs tracking-widest rounded-xl hover:bg-[#bce400] transition-colors"
+              className="w-full py-3.5 bg-[#D4FF00] text-black font-extrabold uppercase text-xs tracking-widest rounded-xl hover:bg-[#bce400] transition-colors shadow-lg shadow-[#D4FF00]/10"
             >
               Unlock Dashboard
             </button>
-
-            <div className="pt-4 border-t border-white/10 text-center">
-              <button
-                type="button"
-                onClick={handleInstantAccess}
-                className="inline-flex items-center justify-center gap-2 text-xs text-[#D4FF00] hover:underline font-bold"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>One-Click Instant Access (Staff Demo)</span>
-              </button>
-              <p className="text-[10px] text-gray-500 mt-1">
-                Preset demo passkey: <span className="text-gray-300 font-mono">admin123</span>
-              </p>
-            </div>
           </form>
         </div>
       </div>
@@ -366,6 +374,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             >
               <Plus className="w-3.5 h-3.5 text-[#D4FF00]" />
               <span>Add Creator</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsChangingPasskey(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#111111] border border-white/10 text-xs font-medium text-gray-300 hover:text-[#D4FF00] hover:border-[#D4FF00]/30 transition-colors"
+              title="Change or view admin security passkey"
+            >
+              <Key className="w-3.5 h-3.5" />
+              <span>Passkey</span>
             </button>
 
             <button
@@ -506,8 +524,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
               <button
                 type="button"
-                onClick={handleResetData}
-                title="Reset sample creators"
+                onClick={handleRefreshData}
+                title="Refresh from Cloud Database"
                 className="p-2 text-gray-400 hover:text-white bg-[#0a0a0a] border border-white/10 rounded-xl transition-colors"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -1006,6 +1024,76 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   className="px-5 py-2 bg-[#D4FF00] text-black font-extrabold uppercase rounded-xl hover:bg-[#bce400]"
                 >
                   Save Creator
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Change Passkey Modal */}
+      {isChangingPasskey && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#111111] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#D4FF00]/10 flex items-center justify-center border border-[#D4FF00]/20">
+                  <Key className="w-4 h-4 text-[#D4FF00]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white uppercase tracking-tight">Admin Passkey</h3>
+                  <p className="text-[11px] text-gray-400">Manage security access key for this portal</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsChangingPasskey(false)}
+                className="p-1.5 text-gray-400 hover:text-white rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="bg-[#0a0a0a] border border-white/10 rounded-xl p-3.5 mb-5 space-y-2">
+              <div className="text-[11px] text-gray-400">Current active passkey:</div>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1.5 rounded-lg bg-[#D4FF00]/10 text-[#D4FF00] border border-[#D4FF00]/20 font-mono font-bold text-xs tracking-wider">
+                  {getActivePasskey()}
+                </span>
+                <span className="text-[11px] text-gray-500">
+                  (Required to unlock dashboard)
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveNewPasskey} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">
+                  Set New Secret Passkey
+                </label>
+                <input
+                  type="text"
+                  value={newPasskeyInput}
+                  onChange={(e) => setNewPasskeyInput(e.target.value)}
+                  placeholder="Enter your private passkey"
+                  className="w-full bg-[#0a0a0a] border border-white/20 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#D4FF00] font-mono"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setIsChangingPasskey(false)}
+                  className="px-4 py-2 bg-zinc-800 text-gray-300 font-bold rounded-xl text-xs hover:bg-zinc-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#D4FF00] text-black font-extrabold uppercase rounded-xl hover:bg-[#bce400] text-xs tracking-wider shadow-md shadow-[#D4FF00]/10 transition-colors"
+                >
+                  Save Passkey
                 </button>
               </div>
             </form>

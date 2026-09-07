@@ -149,18 +149,22 @@ export const ApplyPage: React.FC<ApplyPageProps> = ({ onBackToHome }) => {
       params.append('Why Join', formData.whyJoin);
       params.append('Submission Date', new Date().toISOString());
 
-      // Submit to central configured endpoint
-      await fetch(APPLICATION_ENDPOINT, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: params.toString()
-      });
+      // Submit to external spreadsheet endpoint if reachable
+      try {
+        await fetch(APPLICATION_ENDPOINT, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: params.toString()
+        });
+      } catch (sheetErr) {
+        console.warn('External spreadsheet endpoint warning:', sheetErr);
+      }
 
-      // Also persist to Admin Dashboard
-      saveApplication({
+      // Persist permanently to Cloud Database and Admin Dashboard
+      await saveApplication({
         id: 'app_' + Date.now(),
         fullName: formData.fullName,
         instagramHandle: formData.instagramHandle.startsWith('@')

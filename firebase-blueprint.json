@@ -1,0 +1,32 @@
+{
+  "entities": {
+    "Application": {
+      "title": "Creator Application",
+      "description": "Influencer application submission for MIDBLEND campaigns",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string" },
+        "instagramHandle": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "city": { "type": "string" },
+        "platform": { "type": "string" },
+        "category": { "type": "string" },
+        "followers": { "type": "string" },
+        "profileUrl": { "type": "string" },
+        "contentDesc": { "type": "string" },
+        "prevCollabs": { "type": "string" },
+        "whyJoin": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["fullName", "instagramHandle", "email", "phone"]
+    }
+  },
+  "firestore": {
+    "/applications/{applicationId}": {
+      "schema": "Application",
+      "description": "Collection of all submitted creator applications"
+    }
+  }
+}

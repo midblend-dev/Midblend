@@ -1,3 +1,16 @@
+import {
+  collection,
+  doc,
+  setDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  onSnapshot,
+  query,
+  orderBy
+} from 'firebase/firestore';
+import { db } from '../lib/firebase';
+
 export interface CreatorApplication {
   id: string;
   fullName: string;
@@ -17,7 +30,7 @@ export interface CreatorApplication {
   adminNotes?: string;
 }
 
-const STORAGE_KEY = 'midblend_creator_applications_v1';
+const STORAGE_KEY = 'midblend_creator_applications_v2';
 
 export const INITIAL_SAMPLE_APPLICATIONS: CreatorApplication[] = [
   {
@@ -34,7 +47,7 @@ export const INITIAL_SAMPLE_APPLICATIONS: CreatorApplication[] = [
     contentDescription: 'Focus on clean active ingredients (Niacinamide, AHA/BHA) and texture breakdowns with before/after 30-day wear tests.',
     previousCollaborations: 'Plum Goodness, Minimalist, Dot & Key',
     whyJoin: 'Looking for curated campaigns with clinical skincare brands that prioritize evidence-based formulas over generic sponsorships.',
-    submittedAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(), // 45 mins ago
+    submittedAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
     status: 'new',
     adminNotes: 'High engagement rate on reels (~7.4%). Great visual lighting.'
   },
@@ -52,138 +65,173 @@ export const INITIAL_SAMPLE_APPLICATIONS: CreatorApplication[] = [
     contentDescription: 'Resident dermatologist breaking down barrier repair, sunscreen efficacy, and acne solutions in Hindi & English.',
     previousCollaborations: "Dr. Sheth's, Cetaphil, Foxtale",
     whyJoin: 'Want to partner with science-backed brands where I can give honest, clinically sound recommendations to my audience.',
-    submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(), // 3 hours ago
+    submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
     status: 'shortlisted',
     adminNotes: 'Super high credibility for our premium clinical skincare tier.'
-  },
-  {
-    id: 'app_sample_3',
-    fullName: 'Rhea Mehta',
-    instagramHandle: '@rhea_ugc_creates',
-    email: 'rhea.ugc@outlook.com',
-    phone: '+91 97412 88301',
-    city: 'Bangalore',
-    primaryPlatform: 'Instagram',
-    creatorCategory: 'UGC & Aesthetic Product Demos',
-    followers: '10K - 25K',
-    profileUrl: 'https://instagram.com/rhea_ugc_creates',
-    contentDescription: 'Macro shots of dropper textures, water splash aesthetics, and voiceover routine videos shot on iPhone 15 Pro in 4K.',
-    previousCollaborations: 'Aqualogica, Kaya, Aviva Beauty',
-    whyJoin: 'I specialize in high-converting ad hooks and organic creator testimonials for direct-to-consumer skincare brands.',
-    submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(), // 12 hours ago
-    status: 'reviewing',
-    adminNotes: 'Clean video production quality. Fast turnaround.'
-  },
-  {
-    id: 'app_sample_4',
-    fullName: 'Pooja Hegde',
-    instagramHandle: '@pooja.cleanliving',
-    email: 'pooja.clean@gmail.com',
-    phone: '+91 99002 11983',
-    city: 'Hyderabad',
-    primaryPlatform: 'YouTube',
-    creatorCategory: 'Ayurveda & Modern Botanical',
-    followers: '100K+',
-    profileUrl: 'https://youtube.com',
-    contentDescription: 'Holistic lifestyle routines, barrier-friendly cold-pressed botanical oils, and ingredient debunking.',
-    previousCollaborations: 'Pellôps, Forest Essentials, Kama Ayurveda',
-    whyJoin: 'Midblend has the best agency reputation for connecting creators directly with brand founders.',
-    submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 28).toISOString(), // 1 day ago
-    status: 'approved',
-    adminNotes: 'Verified audience demographics: 82% women aged 20-34 in tier 1 Indian cities.'
-  },
-  {
-    id: 'app_sample_5',
-    fullName: 'Tarun Varma',
-    instagramHandle: '@skincarewithtarun',
-    email: 'tarun.varma@gmail.com',
-    phone: '+91 91234 56789',
-    city: 'Pune',
-    primaryPlatform: 'Instagram',
-    creatorCategory: "Men's Skincare & Grooming",
-    followers: '5K - 10K',
-    profileUrl: 'https://instagram.com/skincarewithtarun',
-    contentDescription: 'Simplifying grooming routines, post-shave barrier calming, and non-greasy daily SPFs for Indian men.',
-    previousCollaborations: 'The Man Company, Minimalist',
-    whyJoin: 'Excited to represent the growing male skincare community.',
-    submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-    status: 'new',
-    adminNotes: 'Growing niche. High potential for men skincare campaigns.'
   }
 ];
 
-export function getApplications(): CreatorApplication[] {
+// Helper to read local cache
+export function getLocalApplications(): CreatorApplication[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_SAMPLE_APPLICATIONS));
-      return INITIAL_SAMPLE_APPLICATIONS;
-    }
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_SAMPLE_APPLICATIONS));
-      return INITIAL_SAMPLE_APPLICATIONS;
-    }
-    return parsed;
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return INITIAL_SAMPLE_APPLICATIONS;
+    return [];
   }
 }
 
-export function saveApplication(app: CreatorApplication): void {
+// Synchronous getter for immediate render
+export function getApplications(): CreatorApplication[] {
+  return getLocalApplications();
+}
+
+// Subscribe to real-time updates from Cloud Firestore
+export function subscribeApplications(
+  onUpdate: (apps: CreatorApplication[]) => void
+): () => void {
   try {
-    const current = getApplications();
-    // Prepend to top
+    const colRef = collection(db, 'applications');
+    const q = query(colRef);
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: CreatorApplication[] = [];
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data() as CreatorApplication;
+            list.push({ ...data, id: docSnap.id });
+          });
+
+          // Sort by newest submission first
+          list.sort((a, b) => {
+            const timeA = new Date(a.submittedAt || 0).getTime();
+            const timeB = new Date(b.submittedAt || 0).getTime();
+            return timeB - timeA;
+          });
+
+          // Update local cache
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+          onUpdate(list);
+        } else {
+          // If Firestore collection has no documents yet, check local storage
+          const local = getLocalApplications();
+          onUpdate(local);
+        }
+      },
+      (error) => {
+        console.warn('Firestore subscription fallback to local cache:', error);
+        onUpdate(getLocalApplications());
+      }
+    );
+
+    return unsubscribe;
+  } catch (err) {
+    console.warn('Failed to subscribe to Firestore:', err);
+    onUpdate(getLocalApplications());
+    return () => {};
+  }
+}
+
+// Save application permanently to Firestore and local cache
+export async function saveApplication(app: CreatorApplication): Promise<void> {
+  // 1. Update local cache immediately so UI is responsive
+  try {
+    const current = getLocalApplications();
     const updated = [app, ...current.filter((item) => item.id !== app.id)];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   } catch (err) {
-    console.error('Failed to save application locally:', err);
+    console.error('Failed to update local cache:', err);
+  }
+
+  // 2. Persist permanently to Cloud Firestore
+  try {
+    const docRef = doc(db, 'applications', app.id);
+    await setDoc(docRef, {
+      ...app,
+      savedToCloudAt: new Date().toISOString()
+    });
+    console.log('Application saved to Firestore permanently:', app.id);
+  } catch (err) {
+    console.error('Failed to save application to Firestore:', err);
   }
 }
 
-export function updateApplicationStatus(
+// Update status in Firestore and local cache
+export async function updateApplicationStatus(
   id: string,
   status: CreatorApplication['status']
-): CreatorApplication[] {
+): Promise<CreatorApplication[]> {
+  const current = getLocalApplications();
+  const updated = current.map((item) => (item.id === id ? { ...item, status } : item));
   try {
-    const current = getApplications();
-    const updated = current.map((item) => (item.id === id ? { ...item, status } : item));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    return updated;
-  } catch {
-    return getApplications();
+  } catch {}
+
+  try {
+    const docRef = doc(db, 'applications', id);
+    await updateDoc(docRef, { status });
+  } catch (err) {
+    console.error('Failed to update status in Firestore:', err);
   }
+
+  return updated;
 }
 
-export function updateApplicationNotes(id: string, adminNotes: string): CreatorApplication[] {
+// Update notes in Firestore and local cache
+export async function updateApplicationNotes(
+  id: string,
+  adminNotes: string
+): Promise<CreatorApplication[]> {
+  const current = getLocalApplications();
+  const updated = current.map((item) => (item.id === id ? { ...item, adminNotes } : item));
   try {
-    const current = getApplications();
-    const updated = current.map((item) => (item.id === id ? { ...item, adminNotes } : item));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    return updated;
-  } catch {
-    return getApplications();
+  } catch {}
+
+  try {
+    const docRef = doc(db, 'applications', id);
+    await updateDoc(docRef, { adminNotes });
+  } catch (err) {
+    console.error('Failed to update notes in Firestore:', err);
   }
+
+  return updated;
 }
 
-export function deleteApplication(id: string): CreatorApplication[] {
+// Delete application from Firestore and local cache
+export async function deleteApplication(id: string): Promise<CreatorApplication[]> {
+  const current = getLocalApplications();
+  const updated = current.filter((item) => item.id !== id);
   try {
-    const current = getApplications();
-    const updated = current.filter((item) => item.id !== id);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    return updated;
-  } catch {
-    return getApplications();
+  } catch {}
+
+  try {
+    const docRef = doc(db, 'applications', id);
+    await deleteDoc(docRef);
+  } catch (err) {
+    console.error('Failed to delete application from Firestore:', err);
   }
+
+  return updated;
 }
 
+// Explicit button to load sample data if user wants test data
+export async function seedSampleApplications(): Promise<CreatorApplication[]> {
+  for (const sample of INITIAL_SAMPLE_APPLICATIONS) {
+    await saveApplication(sample);
+  }
+  return INITIAL_SAMPLE_APPLICATIONS;
+}
+
+// Clear all applications
 export function resetToSampleApplications(): CreatorApplication[] {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_SAMPLE_APPLICATIONS));
-    return INITIAL_SAMPLE_APPLICATIONS;
-  } catch {
-    return INITIAL_SAMPLE_APPLICATIONS;
-  }
+  localStorage.removeItem(STORAGE_KEY);
+  return [];
 }
 
 export function exportApplicationsToCSV(applications: CreatorApplication[]): void {
