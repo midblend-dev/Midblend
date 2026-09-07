@@ -86,6 +86,30 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   };
 
   useEffect(() => {
+    const prevTitle = document.title;
+    document.title = 'Admin Portal — MIDBLEND';
+    let metaRobots = document.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
+    let created = false;
+    if (!metaRobots) {
+      metaRobots = document.createElement('meta');
+      metaRobots.name = 'robots';
+      document.head.appendChild(metaRobots);
+      created = true;
+    }
+    const prevContent = metaRobots.content;
+    metaRobots.content = 'noindex, nofollow';
+
+    return () => {
+      document.title = prevTitle;
+      if (created && metaRobots) {
+        metaRobots.remove();
+      } else if (metaRobots) {
+        metaRobots.content = prevContent;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (isAuthenticated) {
       setApplications(getApplications());
       const unsubscribe = subscribeApplications((liveList) => {
