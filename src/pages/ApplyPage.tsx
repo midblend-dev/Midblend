@@ -18,6 +18,7 @@ const INITIAL_FORM: CreatorApplicationFormData = {
   creatorCategory: 'Skincare',
   followers: '',
   profileUrl: '',
+  barterOpen: 'Yes',
   contentDescription: '',
   previousCollaborations: '',
   whyJoin: '',
@@ -54,11 +55,11 @@ export const ApplyPage: React.FC<ApplyPageProps> = ({ onBackToHome }) => {
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone / WhatsApp number is required.';
     } else if (phoneClean.length < 7) {
-      newErrors.phone = 'Please enter a valid phone number with country code.';
+      newErrors.phone = 'Please enter a valid 10-digit phone number.';
     }
 
     if (!formData.city.trim()) {
-      newErrors.city = 'City / Location is required.';
+      newErrors.city = 'State & City is required.';
     }
 
     if (!formData.primaryPlatform) {
@@ -87,10 +88,6 @@ export const ApplyPage: React.FC<ApplyPageProps> = ({ onBackToHome }) => {
       newErrors.contentDescription = 'Please tell us briefly about your content.';
     } else if (formData.contentDescription.trim().length < 15) {
       newErrors.contentDescription = 'Please provide a bit more detail about your content (min 15 characters).';
-    }
-
-    if (!formData.whyJoin.trim()) {
-      newErrors.whyJoin = 'Please share why you want to join MIDBLEND.';
     }
 
     if (!formData.termsAccepted) {
@@ -134,16 +131,21 @@ export const ApplyPage: React.FC<ApplyPageProps> = ({ onBackToHome }) => {
     setErrorMessage('');
 
     try {
+      const normalizedPhone = formData.phone.trim().startsWith('+')
+        ? formData.phone.trim()
+        : `+91 ${formData.phone.trim()}`;
+
       const params = new URLSearchParams();
       params.append('Full Name', formData.fullName);
       params.append('Instagram Handle', formData.instagramHandle);
       params.append('Email Address', formData.email);
-      params.append('Phone Number', formData.phone);
+      params.append('Phone Number', normalizedPhone);
       params.append('City', formData.city);
       params.append('Primary Platform', formData.primaryPlatform);
       params.append('Creator Category', formData.creatorCategory);
       params.append('Followers', formData.followers);
       params.append('Profile URL', formData.profileUrl);
+      params.append('Barter Collaboration', formData.barterOpen);
       params.append('Content Description', formData.contentDescription);
       params.append('Previous Collaborations', formData.previousCollaborations || 'None specified');
       params.append('Why Join', formData.whyJoin);
@@ -171,12 +173,13 @@ export const ApplyPage: React.FC<ApplyPageProps> = ({ onBackToHome }) => {
           ? formData.instagramHandle
           : `@${formData.instagramHandle}`,
         email: formData.email,
-        phone: formData.phone,
+        phone: normalizedPhone,
         city: formData.city,
         primaryPlatform: formData.primaryPlatform,
         creatorCategory: formData.creatorCategory,
         followers: formData.followers,
         profileUrl: formData.profileUrl || `https://instagram.com/${formData.instagramHandle.replace('@', '')}`,
+        barterOpen: formData.barterOpen,
         contentDescription: formData.contentDescription,
         previousCollaborations: formData.previousCollaborations || 'None listed',
         whyJoin: formData.whyJoin,
@@ -380,27 +383,33 @@ export const ApplyPage: React.FC<ApplyPageProps> = ({ onBackToHome }) => {
                     <label htmlFor="phone" className="block text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-2">
                       Phone / WhatsApp Number *
                     </label>
-                    <input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      required
-                      value={formData.phone}
-                      onChange={handleChange}
-                      placeholder="+1 (555) 000-0000"
-                      className={`w-full px-4 py-3 rounded-xl bg-[#181818] border ${
-                        errors.phone ? 'border-red-500' : 'border-white/10'
-                      } text-white placeholder-zinc-500 text-sm focus:outline-none focus:border-[#D4FF00] transition-colors`}
-                    />
+                    <div className={`flex items-center rounded-xl bg-[#181818] border ${
+                      errors.phone ? 'border-red-500' : 'border-white/10'
+                    } focus-within:border-[#D4FF00] transition-colors overflow-hidden`}>
+                      <div className="flex items-center gap-1.5 px-3.5 py-3 border-r border-white/10 bg-white/[0.02] text-zinc-300 text-sm font-medium select-none shrink-0">
+                        <span className="text-base leading-none">🇮🇳</span>
+                        <span className="text-white font-semibold tracking-wide">+91</span>
+                      </div>
+                      <input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        required
+                        value={formData.phone}
+                        onChange={handleChange}
+                        placeholder="98765 43210"
+                        className="w-full px-4 py-3 bg-transparent text-white placeholder-zinc-500 text-sm focus:outline-none"
+                      />
+                    </div>
                     {errors.phone && (
                       <p className="text-xs text-red-400 mt-1">{errors.phone}</p>
                     )}
                   </div>
 
-                  {/* 5. City */}
+                  {/* 5. State & City */}
                   <div className="sm:col-span-2">
                     <label htmlFor="city" className="block text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-2">
-                      City & Country *
+                      State & City *
                     </label>
                     <input
                       id="city"
@@ -409,7 +418,7 @@ export const ApplyPage: React.FC<ApplyPageProps> = ({ onBackToHome }) => {
                       required
                       value={formData.city}
                       onChange={handleChange}
-                      placeholder="e.g. Los Angeles, CA or London, UK"
+                      placeholder="e.g. Mumbai, Maharashtra or Bengaluru, Karnataka"
                       className={`w-full px-4 py-3 rounded-xl bg-[#181818] border ${
                         errors.city ? 'border-red-500' : 'border-white/10'
                       } text-white placeholder-zinc-500 text-sm focus:outline-none focus:border-[#D4FF00] transition-colors`}
@@ -516,10 +525,10 @@ export const ApplyPage: React.FC<ApplyPageProps> = ({ onBackToHome }) => {
                 </div>
               </div>
 
-              {/* Section: Content & Collaboration Background */}
+              {/* Section: Content */}
               <div className="border-b border-white/10 pb-6 space-y-5">
                 <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-[#D4FF00] block mb-2">
-                  03. CONTENT & COLLABORATIONS
+                  03. CONTENT
                 </span>
 
                 {/* 10. Tell us about your content */}
@@ -544,7 +553,56 @@ export const ApplyPage: React.FC<ApplyPageProps> = ({ onBackToHome }) => {
                   )}
                 </div>
 
-                {/* 11. Previous Brand Collaborations */}
+                {/* 11. Are you open for barter collaboration? */}
+                <div>
+                  <label className="block text-[10px] font-bold text-[#D4FF00] uppercase tracking-widest mb-2">
+                    Are you open for barter collaboration? *
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {[
+                      {
+                        value: 'Yes',
+                        title: 'Yes, definitely',
+                        subtitle: 'Open for product gifting & barter campaigns'
+                      },
+                      {
+                        value: 'Depends',
+                        title: 'Depends on brand',
+                        subtitle: 'Based on product value & brand fit'
+                      }
+                    ].map((opt) => {
+                      const isSelected = formData.barterOpen === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setFormData((prev) => ({ ...prev, barterOpen: opt.value }))}
+                          className={`p-3.5 rounded-xl border text-left transition-all ${
+                            isSelected
+                              ? 'bg-[#D4FF00]/10 border-[#D4FF00] text-white shadow-sm'
+                              : 'bg-[#181818] border-white/10 text-zinc-400 hover:border-white/20 hover:text-zinc-200'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className={`text-xs font-bold ${isSelected ? 'text-[#D4FF00]' : 'text-white'}`}>
+                              {opt.title}
+                            </span>
+                            <span
+                              className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                                isSelected ? 'border-[#D4FF00] bg-[#D4FF00]' : 'border-zinc-600 bg-transparent'
+                              }`}
+                            >
+                              {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-black" />}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-zinc-400 leading-snug">{opt.subtitle}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 12. Previous Brand Collaborations */}
                 <div>
                   <label htmlFor="previousCollaborations" className="block text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-2">
                     Previous Brand Collaborations (Optional)
@@ -558,28 +616,6 @@ export const ApplyPage: React.FC<ApplyPageProps> = ({ onBackToHome }) => {
                     placeholder="List notable skincare or cosmetic brands you've worked with..."
                     className="w-full px-4 py-3 rounded-xl bg-[#181818] border border-white/10 text-white placeholder-zinc-500 text-sm focus:outline-none focus:border-[#D4FF00] transition-colors resize-none"
                   />
-                </div>
-
-                {/* 12. Why do you want to join MIDBLEND? */}
-                <div>
-                  <label htmlFor="whyJoin" className="block text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-2">
-                    Why do you want to join MIDBLEND? *
-                  </label>
-                  <textarea
-                    id="whyJoin"
-                    name="whyJoin"
-                    rows={3}
-                    required
-                    value={formData.whyJoin}
-                    onChange={handleChange}
-                    placeholder="What excites you about collaborating with skincare brands through our community?"
-                    className={`w-full px-4 py-3 rounded-xl bg-[#181818] border ${
-                      errors.whyJoin ? 'border-red-500' : 'border-white/10'
-                    } text-white placeholder-zinc-500 text-sm focus:outline-none focus:border-[#D4FF00] transition-colors resize-none`}
-                  />
-                  {errors.whyJoin && (
-                    <p className="text-xs text-red-400 mt-1">{errors.whyJoin}</p>
-                  )}
                 </div>
               </div>
 

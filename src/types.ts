@@ -8,6 +8,7 @@ export interface CreatorApplicationFormData {
   creatorCategory: 'Beauty' | 'Skincare' | 'Makeup' | 'Haircare' | 'Lifestyle' | 'Other' | '';
   followers: string;
   profileUrl: string;
+  barterOpen: 'Yes' | 'Depends' | 'No' | string;
   contentDescription: string;
   previousCollaborations: string;
   whyJoin: string;

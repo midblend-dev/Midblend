@@ -219,6 +219,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       creatorCategory: manualForm.creatorCategory,
       followers: manualForm.followers,
       profileUrl: manualForm.profileUrl || `https://instagram.com/${manualForm.instagramHandle.replace('@', '')}`,
+      barterOpen: 'Yes',
       contentDescription: manualForm.contentDescription || 'Manual scout entry',
       previousCollaborations: manualForm.previousCollaborations || 'N/A',
       whyJoin: manualForm.whyJoin,
@@ -632,11 +633,22 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                           </div>
                         </td>
 
-                        {/* Category */}
+                        {/* Category & Barter */}
                         <td className="py-4 px-4 hidden md:table-cell text-gray-300">
                           <span className="inline-block px-2.5 py-1 rounded-md bg-zinc-900 border border-white/10 text-[10px] font-medium">
                             {app.creatorCategory}
                           </span>
+                          <div className="mt-1">
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium border ${
+                              app.barterOpen === 'No'
+                                ? 'bg-zinc-800 text-zinc-400 border-white/5'
+                                : app.barterOpen === 'Depends'
+                                ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                                : 'bg-[#D4FF00]/10 text-[#D4FF00] border-[#D4FF00]/20'
+                            }`}>
+                              Barter: {app.barterOpen || 'Yes'}
+                            </span>
+                          </div>
                         </td>
 
                         {/* Followers */}
@@ -841,6 +853,30 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 <p className="text-xs sm:text-sm text-gray-200 bg-[#0c0c0c] p-3.5 rounded-xl border border-white/5 leading-relaxed">
                   {selectedApp.contentDescription}
                 </p>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
+                  Open for Barter Collaboration?
+                </h4>
+                <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#0c0c0c] border border-white/10 text-xs font-medium">
+                  <span className={`w-2 h-2 rounded-full ${
+                    selectedApp.barterOpen === 'No'
+                      ? 'bg-zinc-400'
+                      : selectedApp.barterOpen === 'Depends'
+                      ? 'bg-amber-400'
+                      : 'bg-[#D4FF00]'
+                  }`} />
+                  <span className="text-white font-semibold">
+                    {selectedApp.barterOpen === 'Yes'
+                      ? 'Yes — Open for product barter / gifting campaigns'
+                      : selectedApp.barterOpen === 'Depends'
+                      ? 'Depends on brand & product value'
+                      : selectedApp.barterOpen === 'No'
+                      ? 'No — Commercial paid collaborations only'
+                      : 'Yes (Open to barter)'}
+                  </span>
+                </div>
               </div>
 
               <div>

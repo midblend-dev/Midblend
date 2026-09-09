@@ -22,6 +22,7 @@ export interface CreatorApplication {
   creatorCategory: string;
   followers: string;
   profileUrl: string;
+  barterOpen?: 'Yes' | 'Depends' | 'No' | string;
   contentDescription: string;
   previousCollaborations: string;
   whyJoin: string;
@@ -44,6 +45,7 @@ export const INITIAL_SAMPLE_APPLICATIONS: CreatorApplication[] = [
     creatorCategory: 'Skincare & Dermatology Routine',
     followers: '25K - 50K',
     profileUrl: 'https://instagram.com/ananya.glows',
+    barterOpen: 'Yes',
     contentDescription: 'Focus on clean active ingredients (Niacinamide, AHA/BHA) and texture breakdowns with before/after 30-day wear tests.',
     previousCollaborations: 'Plum Goodness, Minimalist, Dot & Key',
     whyJoin: 'Looking for curated campaigns with clinical skincare brands that prioritize evidence-based formulas over generic sponsorships.',
@@ -62,6 +64,7 @@ export const INITIAL_SAMPLE_APPLICATIONS: CreatorApplication[] = [
     creatorCategory: 'Dermatology & Clinical Science',
     followers: '50K - 100K',
     profileUrl: 'https://instagram.com/drkabir.derma',
+    barterOpen: 'Depends',
     contentDescription: 'Resident dermatologist breaking down barrier repair, sunscreen efficacy, and acne solutions in Hindi & English.',
     previousCollaborations: "Dr. Sheth's, Cetaphil, Foxtale",
     whyJoin: 'Want to partner with science-backed brands where I can give honest, clinically sound recommendations to my audience.',
@@ -246,6 +249,7 @@ export function exportApplicationsToCSV(applications: CreatorApplication[]): voi
     'Category',
     'Follower Tier',
     'Profile URL',
+    'Open to Barter',
     'Content Description',
     'Previous Brand Collabs',
     'Why Join Reason',
@@ -271,6 +275,7 @@ export function exportApplicationsToCSV(applications: CreatorApplication[]): voi
     escapeCSV(app.creatorCategory),
     escapeCSV(app.followers),
     escapeCSV(app.profileUrl),
+    escapeCSV(app.barterOpen || 'Not specified'),
     escapeCSV(app.contentDescription),
     escapeCSV(app.previousCollaborations),
     escapeCSV(app.whyJoin),
